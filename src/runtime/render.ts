@@ -4,12 +4,12 @@ export const render = (vnode, container) => {
   mount(vnode, container);
 };
 export const mount = (vnode, container) => {
-  const { ShapeFlag } = vnode;
-  if (ShapeFlag & ShapeFlags.ELEMENT) {
+  const { shapeFlag } = vnode;
+  if (shapeFlag & ShapeFlags.ELEMENT) {
     mountElement(vnode, container);
-  } else if (ShapeFlag & ShapeFlags.TEXT) {
+  } else if (shapeFlag & ShapeFlags.TEXT) {
     mountTextNode(vnode, container);
-  } else if (ShapeFlag & ShapeFlags.FRAGMENT) {
+  } else if (shapeFlag & ShapeFlags.FRAGMENT) {
     mountFragment(vnode, container);
   } else {
     mountComponent(vnode, container);
@@ -22,14 +22,18 @@ export const mountElement = (vnode, container) => {
   mountChildren(vnode, el);
   container.appendChild(el);
 };
+
 export const mountTextNode = (vnode, container) => {
   const textNode = document.createTextNode(vnode);
   container.appendChild(textNode);
 };
+
 export const mountComponent = (vnode, container) => {};
+
 export const mountFragment = (vnode, container) => {
   mountChildren(vnode, container);
 };
+
 export const mountChildren = (vnode, container) => {
   const { shapeFlag, children } = vnode;
   if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
@@ -59,7 +63,7 @@ export const mountProps = (props, el) => {
     let value = props[key];
     switch (key) {
       case "class":
-        el.className = "value";
+        el.className = value;
         break;
       case "style":
         for (const styleName in value) {
@@ -68,8 +72,8 @@ export const mountProps = (props, el) => {
         break;
       default:
         if (/^on[^a-z]/.test(key)) {
-          const eventName = key.slice(2).toUpperCase();
-          el.addEventListner(eventName, value);
+          const eventName = key.slice(2).toLowerCase();
+          el.addEventListener(eventName, value);
         } else if (domPropsRE.test(key)) {
           if (value === "" && isBoolean(el[key])) {
             value = true;

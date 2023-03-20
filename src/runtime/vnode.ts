@@ -1,8 +1,8 @@
 /*
  * @Author: Liboq 99778162+Liboq@users.noreply.github.com
  * @Date: 2023-03-20 09:57:02
- * @LastEditors: Liboq 
- * @LastEditTime: 2023-03-20 10:52:11
+ * @LastEditors: Liboq 99778162+Liboq@users.noreply.github.com
+ * @LastEditTime: 2023-03-20 15:35:19
  */
 import { isString, isNumber, isArray } from "../utils/index";
 export const ShapeFlags = {

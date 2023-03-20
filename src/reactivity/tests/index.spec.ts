@@ -1,4 +1,4 @@
-import { isObject } from "../../utils";
+import { isObject } from "../../utils/index";
 import { reactive } from '../reactive';
 import { effect } from '../effect';
 import { ref } from '../ref';

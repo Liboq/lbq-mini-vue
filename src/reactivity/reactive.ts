@@ -1,4 +1,4 @@
-import { hasChanged, isArray, isObject } from "../utils";
+import { hasChanged, isArray, isObject } from "../utils/index";
 import { track, trigger } from "./effect";
 
 const proxyMap = new WeakMap();
