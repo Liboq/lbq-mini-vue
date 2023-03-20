@@ -10,3 +10,13 @@ export const isFunction = (value)=>{
 export const isArray = (value)=>{
    return  Array.isArray(value)
 }
+export const isString = (value)=>{
+  return typeof value === 'string'
+}
+
+export const isNumber = (value)=>{
+  return typeof value === 'number'
+}
+export const isBoolean = (value)=>{
+  return typeof value === 'boolean'
+}
