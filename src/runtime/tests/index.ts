@@ -1,4 +1,4 @@
-import { h, render } from "../../runtime/index";
+import { h, render } from "../../runtime";
 
 const vnode = h('div',{
     class:'a b',

@@ -1,4 +1,4 @@
-import { isFunction } from "../utils/index";
+import { isFunction } from "../utils";
 import { effect, track, trigger } from "./effect";
 /* 
 computed 与 effect 不同点在于 effect 初始化就会执行，每次里面的元素发生变化也会执行 ，computed 则只会在获取该元素时才会调用，有缓存

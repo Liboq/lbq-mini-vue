@@ -1,4 +1,4 @@
-import { isObject, hasChanged } from "../utils/index";
+import { isObject, hasChanged } from "../utils";
 import { reactive } from "./reactive";
 import { track, trigger } from "./effect";
 export const ref = (value) => {

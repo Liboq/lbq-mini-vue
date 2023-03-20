@@ -1,4 +1,12 @@
-import { hasChanged, isArray, isObject } from "../utils/index";
+/*
+ * @Author: Liboq 99778162+Liboq@users.noreply.github.com
+ * @Date: 2023-03-16 09:43:51
+ * @LastEditors: Liboq 99778162+Liboq@users.noreply.github.com
+ * @LastEditTime: 2023-03-20 16:28:40
+ * @FilePath: \pikachu-mini-vue\src\reactivity\reactive.ts
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
+import { hasChanged, isArray, isObject } from "../utils";
 import { track, trigger } from "./effect";
 
 const proxyMap = new WeakMap();

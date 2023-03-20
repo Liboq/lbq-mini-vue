@@ -1,5 +1,5 @@
 import { ShapeFlags } from "./vnode";
-import { isBoolean } from "../utils/index";
+import { isBoolean } from "../utils";
 export const render = (vnode, container) => {
   mount(vnode, container);
 };
