@@ -2,17 +2,17 @@
  * @Author: Liboq 99778162+Liboq@users.noreply.github.com
  * @Date: 2023-03-20 09:57:02
  * @LastEditors: Liboq 99778162+Liboq@users.noreply.github.com
- * @LastEditTime: 2023-03-20 15:35:19
+ * @LastEditTime: 2023-03-21 17:32:53
  */
 import { isString, isNumber, isArray } from "../utils/index";
 export const ShapeFlags = {
   ELEMENT: 1,
-  TEXT: 1 >> 1,
-  FRAGMENT: 1 >> 2,
-  COMPONENT: 1 >> 3,
-  TEXT_CHILDREN: 1 >> 4,
-  ARRAY_CHILDREN: 1 >> 5,
-  CHILDREN: (1 >> 4) | (1 >> 5),
+  TEXT: 1 << 1,
+  FRAGMENT: 1 << 2,
+  COMPONENT: 1 << 3,
+  TEXT_CHILDREN: 1 << 4,
+  ARRAY_CHILDREN: 1 << 5,
+  CHILDREN: (1 << 4) | (1 << 5),
 };
 export const Text = Symbol("Text");
 export const Fragment = Symbol("Fragment");
@@ -46,5 +46,6 @@ export const h = (type, props, children) => {
     props,
     children,
     shapeFlag,
+    el:null
   };
 };

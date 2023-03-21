@@ -1,4 +1,4 @@
-import { h, render } from "../../runtime";
+import { h, render } from "../../runtime/index";
 
 const vnode = h('div',{
     class:'a b',
@@ -21,4 +21,4 @@ const vnode = h('div',{
         h('li',{style:{color:'red'}},1),
     ])
 ])
-render(vnode,document)
+render(vnode,document.body)
