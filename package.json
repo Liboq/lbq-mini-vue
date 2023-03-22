@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "rollup -c",
-    "dev": "rollup -c -w",
+    "dev": "rollup -c -w && cd ../stuty && serve -s pikachu-mini-vue",
     "test": "jest"
   },
   "jest": {

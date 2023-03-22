@@ -28,6 +28,9 @@ export const patchProps = (oldProps, newProps, el) => {
         el.className = next || "";
         break;
       case "style":
+        if(next == null){
+          el.removeAttribute("style")
+        }
         for (const styleName in next) {
           el.style[styleName] = next[styleName];
         }

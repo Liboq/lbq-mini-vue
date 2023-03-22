@@ -8,8 +8,9 @@ export const render = (vnode, container) => {
       unmount(prevVNode);
     }
   } else {
-    patch(prevVNode, vnode, container);
+    patch(prevVNode, vnode, container,null);
   }
+  container._vnode = vnode
 };
 export const unmount = (vnode) => {
   const { shapeFlag, el } = vnode;
@@ -18,69 +19,89 @@ export const unmount = (vnode) => {
   } else if (shapeFlag & ShapeFlags.FRAGMENT) {
     unmountFragment(vnode);
   } else {
+    console.dir(el);
+    console.log(vnode);
+    
+    console.dir(el.parentNode);
+    
     el.parentNode.removeChild(el);
   }
 };
-export const patch = (n1, n2, container) => {
+export const patch = (n1, n2, container,anchor) => {
   if (n1 && !isSameNode(n1, n2)) {
+    anchor = (n1.anchor||n1.el).nextSibling
     unmount(n1);
     n1 = null;
   }
   const { shapeFlag } = n2;
   if (shapeFlag & ShapeFlags.COMPONENT) {
-    processComponent(n1, n2, container);
+    processComponent(n1, n2, container,anchor);
   } else if (shapeFlag & ShapeFlags.TEXT) {
-    processText(n1, n2, container);
+    processText(n1, n2, container,anchor);
   } else if (shapeFlag & ShapeFlags.FRAGMENT) {
-    processFragment(n1, n2, container);
+    processFragment(n1, n2, container,anchor);
   } else {
-    processElement(n1, n2, container);
+    processElement(n1, n2, container,anchor);
   }
 };
 
-export const processComponent = (n1, n2, container) => {};
+export const processComponent = (n1, n2, container,anchor) => {};
 
-export const unmountComponent = (vnode) => {};
+export const unmountComponent = (vnode) => {
 
-export const processFragment = (n1, n2, container) => {
+};
+
+export const processFragment = (n1, n2, container,anchor) => {
+  const fragmentStartAnchor = n1?n1.el:document.createTextNode('')
+  const fragmentEndAnchor = n2.anchor?n2.anchor:document.createTextNode('')
   if (n1) {
-    patchChildren(n1,n2,container)
+    patchChildren(n1,n2,container,anchor)
   } else {
-    mountChildren(n2.children, container);
+    container.insertBefore(fragmentStartAnchor,anchor)
+    container.insertBefore(fragmentEndAnchor,anchor)
+    mountChildren(n2.children, container,fragmentEndAnchor);
   }
 };
-export const unmountFragment = (vnode) => {};
-export const processText = (n1, n2, container) => {
+export const unmountFragment = (vnode) => {
+  let {el:cur,anchor:end} = vnode
+  const {prarentNode} = cur
+  while(cur!==end){
+    const next = cur.nextSibling
+    prarentNode.removeChild(cur)
+    cur = next
+  }
+};
+export const processText = (n1, n2, container,anchor) => {
   if (n1) {
     n2.el = n1.el;
     n1.el.textContent = n2.children;
   } else {
-    mountTextNode(n2, container);
+    mountTextNode(n2, container,anchor);
   }
 };
-export const processElement = (n1, n2, container) => {
+export const processElement = (n1, n2, container,anchor) => {
   if (n1) {
-    patchElement(n1, n2);
+    patchElement(n1, n2,anchor);
   } else {
-    mountElement(n2, container);
+    mountElement(n2, container,anchor);
   }
 };
-export const patchElement = (n1, n2) => {
+export const patchElement = (n1, n2,anchor) => {
   n2.el = n1.el;
   patchProps(n1.props, n2.props, n2.el);
-  patchChildren(n1, n2, n2.el);
+  patchChildren(n1, n2, n2.el,anchor);
 };
 export const unmountChildren = (children)=>{
   children.forEach(child=>{
     unmount(child)
   })
 }
-export const pathchArrayChildren = (c1,c2,container)=>{
+export const pathchArrayChildren = (c1,c2,container,anchor)=>{
   const oldLength = c1.length
   const newLength = c2.length 
   const commonLength = Math.min(oldLength,newLength)
   for(let i =0;i< commonLength;i++){
-    patch(c1[i],c2[i],container)
+    patch(c1[i],c2[i],container,anchor)
   } 
   if(oldLength>newLength){
     unmountChildren(c1.slice(commonLength))
@@ -89,30 +110,30 @@ export const pathchArrayChildren = (c1,c2,container)=>{
     unmountChildren(c2.slice(commonLength))
   }
 }
-export const patchChildren = (n1, n2, container) => {
-  const {shapeFlage:shapeFlagePrev,children:c1} = n1
+export const patchChildren = (n1, n2, container,anchor) => {
+  
+  const {shapeFlag:shapeFlagPrev,children:c1} = n1
   const {shapeFlag,children:c2} = n2
   if(shapeFlag & ShapeFlags.TEXT_CHILDREN){
-    if(shapeFlagePrev & ShapeFlags.ARRAY_CHILDREN){
+    if(shapeFlagPrev & ShapeFlags.ARRAY_CHILDREN){
       unmountChildren(c1)
     }
     if(c1!==c2){
-    container.textcontent =  c2
+    container.textContent =  c2
     }
   }else if(shapeFlag & ShapeFlags.ARRAY_CHILDREN){
-    if(shapeFlagePrev & ShapeFlags.TEXT_CHILDREN){
-      container.textcontent =  ''
-      mountChildren(c2,container)
-
-    }else if(shapeFlagePrev & ShapeFlags.ARRAY_CHILDREN){
-      pathchArrayChildren(c1,c2,container)
+    if(shapeFlagPrev & ShapeFlags.TEXT_CHILDREN){
+      container.textContent =  ''
+      mountChildren(c2,container,anchor)
+    }else if(shapeFlagPrev & ShapeFlags.ARRAY_CHILDREN){
+      pathchArrayChildren(c1,c2,container,anchor)
     }else{
-      mountChildren(c2,container)
+      mountChildren(c2,container,anchor)
     }
   }else{
-    if(shapeFlagePrev & ShapeFlags.TEXT_CHILDREN){
-      container.textcontent =  ''
-    }else if(shapeFlagePrev & ShapeFlags.ARRAY_CHILDREN){
+    if(shapeFlagPrev & ShapeFlags.TEXT_CHILDREN){
+      container.textContent =  ''
+    }else if(shapeFlagPrev & ShapeFlags.ARRAY_CHILDREN){
       unmountChildren(c1)
     }
   }
@@ -120,28 +141,34 @@ export const patchChildren = (n1, n2, container) => {
 export const isSameNode = (n1, n2) => {
   return n1.type === n2.type;
 };
-export const mountTextNode = (vnode, container) => {
+export const mountTextNode = (vnode, container,anchor) => {
   const textNode = document.createTextNode(vnode.children);
-  container.appendChild(textNode);
+  // container.appendChild(textNode);
+  container.insertBefore(textNode,anchor)
+  vnode.el = textNode
 };
-export const mountFragment = (vnode, container) => {
-  mountChildren(vnode, container);
+export const mountFragment = (vnode, container,anchor) => {
+  mountChildren(vnode, container,anchor);
 };
-export const mountChildren = (children, container) => {
+export const mountChildren = (children, container,anchor) => {
   children.forEach((child) => {
-    patch(null, child, container);
+    patch(null, child, container,anchor);
   });
 };
-export const mountElement = (vnode, container) => {
+export const mountElement = (vnode, container,anchor) => {
   const { shapeFlag, props, type, children } = vnode;
   const el = document.createElement(type);
   mountProps(props, el);
   if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
-    mountTextNode(vnode, el);
+    mountTextNode(vnode, el,anchor);
   } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-    mountChildren(children, el);
+    mountChildren(children, el,anchor);
   }
-  container.appendChild(el);
+  // if (props) {
+  //   patchProps(null, props, el);
+  // }
+  // container.appendChild(el);
+  container.insertBefore(el,anchor)
   vnode.el = el
 };
 const domPropsRE = /[A-Z]|^(next|checked|selected|muted|disabled)$/;
