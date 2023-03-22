@@ -5,8 +5,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "rollup -c",
-    "dev": "rollup -c -w && cd ../stuty && serve -s pikachu-mini-vue",
+    "build": "rollup -c -w",
+    "dev": "cd ./packages/vue && serve -p 8888",
     "test": "jest"
   },
   "jest": {
