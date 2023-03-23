@@ -3,16 +3,17 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
-  "type": "module",
   "scripts": {
-    "build": "rollup -c -w",
-    "dev": "cd ./packages/vue && serve -p 8888",
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "serve": "cd ./packages/vue && serve -p 8888",
     "test": "jest"
   },
   "jest": {
     "transform": {
       "^.+\\.[t|j]sx?$": "babel-jest"
-    }
+    },
+    "testEnvironment": "jest-environment-jsdom"
   },
   "devDependencies": {
     "@babel/core": "^7.21.3",
@@ -29,6 +30,8 @@
     "@rollup/plugin-commonjs": "^24.0.1",
     "@rollup/plugin-node-resolve": "^15.0.1",
     "@rollup/plugin-replace": "^5.0.2",
+    "@testing-library/jest-dom": "^5.16.5",
+    "jest-environment-jsdom": "^29.5.0",
     "rollup": "^3.20.0",
     "rollup-plugin-sourcemaps": "^0.6.3",
     "tslib": "^2.5.0"

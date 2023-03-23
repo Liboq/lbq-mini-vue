@@ -1,5 +1,6 @@
 import { h, render } from "../../runtime/index";
 import { Fragment } from '../vnode';
+import '@testing-library/jest-dom';
 
 const vnode = 
         h("ul", null, [
@@ -23,3 +24,4 @@ setTimeout(() => {
     document.body
   );
 },2000);
+

@@ -42,8 +42,6 @@ it('computed',()=>{
         age:10
     })
     const val = computed(()=>{
-        console.log(obj1);
-        
         return obj1.age +1
     })
     obj1.age++
