@@ -4,7 +4,7 @@
  * @LastEditors: Liboq 99778162+Liboq@users.noreply.github.com
  * @LastEditTime: 2023-03-21 17:32:53
  */
-import { isString, isNumber, isArray } from "../utils/index";
+import { isString, isNumber, isArray, isObject } from '../utils/index';
 export const ShapeFlags = {
   ELEMENT: 1,
   TEXT: 1 << 1,
@@ -51,3 +51,13 @@ export const h = (type, props, children) => {
     key: props && props.key
   };
 };
+export function normalizeVNode(result) {
+  if (isArray(result)) {
+    return h(Fragment, null, result);
+  }
+  if (isObject(result)) {
+    return result;
+  }
+  // string, number
+  return h(Text, null, result.toString());
+}

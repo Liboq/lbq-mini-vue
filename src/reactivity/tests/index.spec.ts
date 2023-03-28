@@ -1,3 +1,4 @@
+import { describe, it ,expect } from 'vitest';
 import { isObject } from "../../utils/index";
 import { reactive } from '../reactive';
 import { effect } from '../effect';

@@ -1,6 +1,7 @@
 import { isBoolean } from "../utils/index";
 import { patchProps } from "./patchProps";
 import { ShapeFlags } from "./vnode";
+import { mountComponent } from './component';
 export const render = (vnode, container) => {
   const prevVNode = container._vnode;
   if (!vnode) {
@@ -40,7 +41,18 @@ export const patch = (n1, n2, container, anchor) => {
   }
 };
 
-export const processComponent = (n1, n2, container, anchor) => {};
+export const processComponent = (n1, n2, container, anchor) => {
+  if(n1){
+    updateComponent(n1,n2)
+  }else{
+    mountComponent(n2,container,anchor,patch)
+  }
+};
+const  updateComponent = (n1, n2)=> {
+  n2.component = n1.component;
+  n2.component.next = n2;
+  n2.component.update();
+}
 
 export const unmountComponent = (vnode) => {};
 
@@ -178,7 +190,7 @@ export const pathchkeyedArrayChildren = (c1, c2, container, anchor) => {
     });
     if (move) {
       // 获取最长递增子序列，-1表示新增
-      const seq = getSequence(source);
+      const seq = goodLengthOfLTS(source);
       let j = seq.length - 1;
       for (let k = source.length - 1; k > 0; k--) {
         if (seq[j] === k) {
@@ -214,13 +226,10 @@ export const pathchkeyedArrayChildren = (c1, c2, container, anchor) => {
     }
   }
 };
-export const getSequence = (source) => {
-  return [];
-};
 
 // const nums = [5,6,1,3,8,9,4]
 // 复杂度过高 O(n^2)
-const lengthOfLTS = (nums) => {
+export const lengthOfLTS = (nums) => {
   const deps = new Array(nums.length).fill(1);
   let max = 1;
   for (let i = 0; i < nums.length; i++) {
@@ -236,10 +245,9 @@ const lengthOfLTS = (nums) => {
 
 // 二分查找法
 // 这里用一个position 把 元素 放到某个位置 存起来 然后 和arr中数组进行比较 
-const goodLengthOfLTS = (nums) => {
-  if (nums.length === 0) {
-    return 0;
-  }
+// 先计算出最长上升数组 [1,3,8,9]
+// 然后计算出最长上升数组对应上方source数组的下标数组为[2,3,4,5]
+export const goodLengthOfLTS = (nums) => {
   const arr = [nums[0]];
   const position =[0]
   for (let i = 1; i < nums.length; i++) {
