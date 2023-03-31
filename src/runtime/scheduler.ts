@@ -26,7 +26,7 @@ const flushJobs = ()=>{
         currentFlushPromise = null
     }
 }
-export const nextTick = (fn)=>{
+export const nextTick = (fn?)=>{
     const p = currentFlushPromise || resolvePromise;
     return fn ? p.then(): p
 }

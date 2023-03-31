@@ -24,7 +24,7 @@ export const Fragment = Symbol("Fragment");
  * @param {String | Array | Object | null} children
  * @return vnode
  */
-export const h = (type, props, children) => {
+export const h = (type, props?, children?) => {
   let shapeFlag = 0;
   if (isString(type)) {
     shapeFlag = ShapeFlags.ELEMENT;
@@ -48,7 +48,8 @@ export const h = (type, props, children) => {
     shapeFlag,
     el:null,
     anchor:null,
-    key: props && props.key
+    key: props && props.key,
+    component:null
   };
 };
 export function normalizeVNode(result) {

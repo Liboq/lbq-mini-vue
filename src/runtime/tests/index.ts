@@ -1,5 +1,5 @@
 import { h, render } from "../../runtime/index";
-import { Fragment } from '../vnode';
+import { Fragment, Text } from '../vnode';
 
 // const vnode = 
 //         h("ul", null, [
@@ -23,66 +23,28 @@ import { Fragment } from '../vnode';
 //     document.body
 //   );
 // },2000);
-const vnode1 =[
-  {
-    type: "h1",
-    props: null,
-    children: "1",
-    shapeFlag: 17,
-    el: {
-    },
-    anchor: null,
-    key: null,
+// const Comp = {
+//   props: ['text'],
+//   render(ctx) {
+//     return h('div', null, ctx.text);
+//   },
+// };
+// render(
+//   h(Fragment, null, [
+//     h(Comp, { text: 'text1' },'1'),
+//     h(Comp, { text: 'text2' },'2'),
+//     h(Comp, { id: 'id' },'3'),
+//   ]),
+//   document.body
+// );
+render(
+  h('div', null, [h(Fragment, null, [h('h1',null,''), h(Text, null, 'child')])]),
+  document.body
+);
+
+const Comp = {
+  render() {
+    return h('p', null, 'comp');
   },
-  {
-    type: "h2",
-    props: null,
-    children: "1",
-    shapeFlag: 17,
-    el: {
-    },
-    anchor: null,
-    key: null,
-  },
-  {
-    type: "h3",
-    props: null,
-    children: "1",
-    shapeFlag: 17,
-    el: {
-    },
-    anchor: null,
-    key: null,
-  },
-  {
-    type: "h4",
-    props: null,
-    children: "1",
-    shapeFlag: 17,
-    el: {
-    },
-    anchor: null,
-    key: null,
-  },
-  {
-    type: "h5",
-    props: null,
-    children: "1",
-    shapeFlag: 17,
-    el: {
-    },
-    anchor: null,
-    key: null,
-  },
-  {
-    type: "h6",
-    props: null,
-    children: "1",
-    shapeFlag: 17,
-    el: {
-    },
-    anchor: null,
-    key: null,
-  },
-]
-render(h('div',null,vnode1),document.body)
+};
+render(h('div', null, [h(Comp,null,'')]), document.body);

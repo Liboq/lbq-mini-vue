@@ -8,13 +8,13 @@ const isArray = (value) => {
     return Array.isArray(value);
 };
 const isString = (value) => {
-    return typeof value === 'string';
+    return typeof value === "string";
 };
 const isNumber = (value) => {
-    return typeof value === 'number';
+    return typeof value === "number";
 };
 const isBoolean = (value) => {
-    return typeof value === 'boolean';
+    return typeof value === "boolean";
 };
 
 /*
@@ -69,7 +69,8 @@ const h = (type, props, children) => {
         shapeFlag,
         el: null,
         anchor: null,
-        key: props && props.key
+        key: props && props.key,
+        component: null
     };
 };
 function normalizeVNode(result) {
@@ -323,8 +324,8 @@ const mountComponent = (vnode, container, anchor, patch) => {
         }
         // 编译
         // const code = compile(template)
-        // Component.render = new Function('ctx',code)
-        // console.log(Component.render);
+        Component.render = new Function('ctx', template);
+        console.log(Component.render);
     }
     instance.update = effect(() => {
         if (!instance.isMounted) {
@@ -376,19 +377,23 @@ const fallThrough = (instance, subTree) => {
 
 const render = (vnode, container) => {
     const prevVNode = container._vnode;
+    console.log(container._vnode);
     if (!vnode) {
         if (prevVNode) {
             unmount(prevVNode);
         }
     }
     else {
+        console.log(prevVNode);
         patch(prevVNode, vnode, container, null);
     }
     container._vnode = vnode;
 };
 const unmount = (vnode) => {
     const { shapeFlag, el } = vnode;
-    if (shapeFlag & ShapeFlags.COMPONENT) ;
+    if (shapeFlag & ShapeFlags.COMPONENT) {
+        unmountComponent(vnode);
+    }
     else if (shapeFlag & ShapeFlags.FRAGMENT) {
         unmountFragment(vnode);
     }
@@ -398,6 +403,8 @@ const unmount = (vnode) => {
 };
 const patch = (n1, n2, container, anchor) => {
     if (n1 && !isSameNode(n1, n2)) {
+        console.log(n1);
+        debugger;
         anchor = (n1.anchor || n1.el).nextSibling;
         unmount(n1);
         n1 = null;
@@ -428,6 +435,9 @@ const updateComponent = (n1, n2) => {
     n2.component = n1.component;
     n2.component.next = n2;
     n2.component.update();
+};
+const unmountComponent = (vnode) => {
+    unmount(vnode.component.subTree);
 };
 const processFragment = (n1, n2, container, anchor) => {
     const fragmentStartAnchor = n1 ? n1.el : document.createTextNode("");
@@ -622,7 +632,7 @@ const goodLengthOfLTS = (nums) => {
     }
     return arr;
 };
-const pathchUnkeyedArrayChildren = (c1, c2, container, anchor) => {
+const patchUnkeyedChildren = (c1, c2, container, anchor) => {
     const oldLength = c1.length;
     const newLength = c2.length;
     const commonLength = Math.min(oldLength, newLength);
@@ -633,7 +643,7 @@ const pathchUnkeyedArrayChildren = (c1, c2, container, anchor) => {
         unmountChildren(c1.slice(commonLength));
     }
     if (oldLength < newLength) {
-        unmountChildren(c2.slice(commonLength));
+        mountChildren(c2.slice(commonLength), container, anchor);
     }
 };
 const patchChildren = (n1, n2, container, anchor) => {
@@ -653,11 +663,11 @@ const patchChildren = (n1, n2, container, anchor) => {
             mountChildren(c2, container, anchor);
         }
         else if (shapeFlagPrev & ShapeFlags.ARRAY_CHILDREN) {
-            if (c1[0   ]) {
+            if (c1[0] && c1[0].key != null && c2[0] && c2[0].key != null) {
                 pathchkeyedArrayChildren(c1, c2, container, anchor);
             }
             else {
-                pathchUnkeyedArrayChildren(c1, c2, container, anchor);
+                patchUnkeyedChildren(c1, c2, container, anchor);
             }
         }
         else {
@@ -679,7 +689,15 @@ const isSameNode = (n1, n2) => {
 const mountTextNode = (vnode, container, anchor) => {
     const textNode = document.createTextNode(vnode.children);
     // container.appendChild(textNode);
-    container.insertBefore(textNode, anchor);
+    console.log(anchor);
+    console.dir(textNode);
+    console.log(vnode);
+    if (anchor && anchor.textContent == '') {
+        container.appendChild(textNode);
+    }
+    else {
+        container.insertBefore(textNode, anchor);
+    }
     vnode.el = textNode;
 };
 const mountChildren = (children, container, anchor) => {
@@ -697,11 +715,12 @@ const mountElement = (vnode, container, anchor) => {
     else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
         mountChildren(children, el, anchor);
     }
-    // if (props) {
-    //   patchProps(null, props, el);
-    // }
+    if (props) {
+        patchProps(null, props, el);
+    }
     // container.appendChild(el);
     container.insertBefore(el, anchor);
+    console.log(el);
     vnode.el = el;
 };
 const domPropsRE = /[A-Z]|^(next|checked|selected|muted|disabled)$/;
@@ -763,61 +782,25 @@ const mountProps = (props, el) => {
 //     document.body
 //   );
 // },2000);
-const vnode1 = [
-    {
-        type: "h1",
-        props: null,
-        children: "1",
-        shapeFlag: 17,
-        el: {},
-        anchor: null,
-        key: null,
+// const Comp = {
+//   props: ['text'],
+//   render(ctx) {
+//     return h('div', null, ctx.text);
+//   },
+// };
+// render(
+//   h(Fragment, null, [
+//     h(Comp, { text: 'text1' },'1'),
+//     h(Comp, { text: 'text2' },'2'),
+//     h(Comp, { id: 'id' },'3'),
+//   ]),
+//   document.body
+// );
+render(h('div', null, [h(Fragment, null, [h('h1', null, ''), h(Text, null, 'child')])]), document.body);
+const Comp = {
+    render() {
+        return h('p', null, 'comp');
     },
-    {
-        type: "h2",
-        props: null,
-        children: "1",
-        shapeFlag: 17,
-        el: {},
-        anchor: null,
-        key: null,
-    },
-    {
-        type: "h3",
-        props: null,
-        children: "1",
-        shapeFlag: 17,
-        el: {},
-        anchor: null,
-        key: null,
-    },
-    {
-        type: "h4",
-        props: null,
-        children: "1",
-        shapeFlag: 17,
-        el: {},
-        anchor: null,
-        key: null,
-    },
-    {
-        type: "h5",
-        props: null,
-        children: "1",
-        shapeFlag: 17,
-        el: {},
-        anchor: null,
-        key: null,
-    },
-    {
-        type: "h6",
-        props: null,
-        children: "1",
-        shapeFlag: 17,
-        el: {},
-        anchor: null,
-        key: null,
-    },
-];
-render(h('div', null, vnode1), document.body);
+};
+render(h('div', null, [h(Comp, null, '')]), document.body);
 //# sourceMappingURL=lbq-mini-vue.esm-bundler.js.map

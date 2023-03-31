@@ -1,7 +1,8 @@
 import { effect } from "../reactivity/effect";
 import { normalizeVNode } from "./vnode";
-import { queueJob } from './schedule';
+import { queueJob } from './scheduler';
 import { reactive } from '../reactivity/reactive';
+import { compile } from '../compile/compile';
 export const mountComponent = (vnode, container, anchor, patch) => {
   const { type: Component } = vnode;
   const instance = (vnode.component = {
@@ -30,9 +31,9 @@ export const mountComponent = (vnode, container, anchor, patch) => {
 
     }
     // 编译
-    // const code = compile(template)
-    // Component.render = new Function('ctx',code)
-    // console.log(Component.render);
+    const code:any= compile(template)
+    Component.render = new Function('ctx',code)
+    console.log(Component.render);
     
   }
   instance.update = effect(() => {

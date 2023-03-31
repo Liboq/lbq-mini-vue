@@ -4,13 +4,18 @@ import { ShapeFlags } from "./vnode";
 import { mountComponent } from './component';
 export const render = (vnode, container) => {
   const prevVNode = container._vnode;
+  console.log(container._vnode);
+  
+  
   if (!vnode) {
     if (prevVNode) {
       unmount(prevVNode);
     }
   } else {
+  console.log(prevVNode);
     patch(prevVNode, vnode, container, null);
   }
+  
   container._vnode = vnode;
 };
 export const unmount = (vnode) => {
@@ -25,6 +30,8 @@ export const unmount = (vnode) => {
 };
 export const patch = (n1, n2, container, anchor) => {
   if (n1 && !isSameNode(n1, n2)) {
+    console.log(n1);
+    debugger
     anchor = (n1.anchor || n1.el).nextSibling;
     unmount(n1);
     n1 = null;
@@ -54,7 +61,9 @@ const  updateComponent = (n1, n2)=> {
   n2.component.update();
 }
 
-export const unmountComponent = (vnode) => {};
+export const unmountComponent = (vnode) => {
+  unmount(vnode.component.subTree)
+};
 
 export const processFragment = (n1, n2, container, anchor) => {
   const fragmentStartAnchor = n1 ? n1.el : document.createTextNode("");
@@ -284,7 +293,7 @@ export const goodLengthOfLTS = (nums) => {
   return arr;
 };
 
-export const pathchUnkeyedArrayChildren = (c1, c2, container, anchor) => {
+export const patchUnkeyedChildren = (c1, c2, container, anchor) => {
   const oldLength = c1.length;
   const newLength = c2.length;
   const commonLength = Math.min(oldLength, newLength);
@@ -295,7 +304,7 @@ export const pathchUnkeyedArrayChildren = (c1, c2, container, anchor) => {
     unmountChildren(c1.slice(commonLength));
   }
   if (oldLength < newLength) {
-    unmountChildren(c2.slice(commonLength));
+    mountChildren(c2.slice(commonLength),container,anchor);
   }
 };
 export const patchChildren = (n1, n2, container, anchor) => {
@@ -313,10 +322,10 @@ export const patchChildren = (n1, n2, container, anchor) => {
       container.textContent = "";
       mountChildren(c2, container, anchor);
     } else if (shapeFlagPrev & ShapeFlags.ARRAY_CHILDREN) {
-      if (c1[0 && c1[0].key != null && c2[0] && c2[0].key != null]) {
+      if (c1[0] && c1[0].key != null && c2[0] && c2[0].key != null) {
         pathchkeyedArrayChildren(c1, c2, container, anchor);
       } else {
-        pathchUnkeyedArrayChildren(c1, c2, container, anchor);
+        patchUnkeyedChildren(c1, c2, container, anchor);
       }
     } else {
       mountChildren(c2, container, anchor);
@@ -335,7 +344,16 @@ export const isSameNode = (n1, n2) => {
 export const mountTextNode = (vnode, container, anchor) => {
   const textNode = document.createTextNode(vnode.children);
   // container.appendChild(textNode);
+  console.log(anchor);
+  console.dir(textNode);
+  console.log(vnode);
+  if(anchor&&anchor.textContent ==''){
+  container.appendChild(textNode);
+
+  }else{
   container.insertBefore(textNode, anchor);
+
+  }
   vnode.el = textNode;
 };
 export const mountFragment = (vnode, container, anchor) => {
@@ -355,11 +373,13 @@ export const mountElement = (vnode, container, anchor) => {
   } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
     mountChildren(children, el, anchor);
   }
-  // if (props) {
-  //   patchProps(null, props, el);
-  // }
+  if (props) {
+    patchProps(null, props, el);
+  }
   // container.appendChild(el);
   container.insertBefore(el, anchor);
+  console.log(el);
+  
   vnode.el = el;
 };
 const domPropsRE = /[A-Z]|^(next|checked|selected|muted|disabled)$/;
