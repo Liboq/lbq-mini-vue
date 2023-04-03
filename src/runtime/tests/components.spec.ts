@@ -1,9 +1,7 @@
-
 import { render } from '../render';
 import { h, Text, Fragment } from '../vnode';
 import { ref, reactive, computed } from '../../reactivity';
 import { nextTick } from '../scheduler';
-import { beforeEach ,it,describe,expect} from 'vitest';
 
 let root;
 beforeEach(() => {
@@ -11,17 +9,17 @@ beforeEach(() => {
 });
 
 describe('mount component', () => {
-  it('mount simple component', () => {
+  test('mount simple component', () => {
     const Comp = {
       render() {
-        return h('div',null,'');
+        return h('div');
       },
     };
-    render(h(Comp,null,''), root);
+    render(h(Comp), root);
     expect(root.innerHTML).toBe('<div></div>');
   });
 
-  it('mount component with props', () => {
+  test('mount component with props', () => {
     let foo, bar;
     const Comp = {
       props: ['foo'],
@@ -32,7 +30,7 @@ describe('mount component', () => {
         return h('div', null, ctx.foo);
       },
     };
-    render(h(Comp, { foo: 'foo', bar: 'bar' },''), root);
+    render(h(Comp, { foo: 'foo', bar: 'bar' }), root);
     expect(root.innerHTML).toBe('<div bar="bar">foo</div>');
     expect(foo).toBe('foo');
     expect(bar).toBeUndefined();
@@ -41,21 +39,21 @@ describe('mount component', () => {
   it('should create an Component with props', () => {
     const Comp = {
       render: () => {
-        return h('div',null,'');
+        return h('div');
       },
     };
-    render(h(Comp, { id: 'foo', class: 'bar' },''), root);
+    render(h(Comp, { id: 'foo', class: 'bar' }), root);
     expect(root.innerHTML).toBe(`<div id="foo" class="bar"></div>`);
   });
 
   it('should create an Component with direct text children', () => {
     const Comp = {
       render: () => {
-        return h('div', null, 'it');
+        return h('div', null, 'test');
       },
     };
-    render(h(Comp, { id: 'foo', class: 'bar' },''), root);
-    expect(root.innerHTML).toBe(`<div id="foo" class="bar">it</div>`);
+    render(h(Comp, { id: 'foo', class: 'bar' }), root);
+    expect(root.innerHTML).toBe(`<div id="foo" class="bar">test</div>`);
   });
 
   it('should expose return values to template render context', () => {
@@ -73,11 +71,11 @@ describe('mount component', () => {
         return `${ctx.ref.value} ${ctx.object.msg} ${ctx.value}`;
       },
     };
-    render(h(Comp,null,''), root);
+    render(h(Comp), root);
     expect(root.innerHTML).toBe(`foo bar baz`);
   });
 
-  it('mount multi components',  () => {
+  test('mount multi components', () => {
     const Comp = {
       props: ['text'],
       render(ctx) {
@@ -86,9 +84,9 @@ describe('mount component', () => {
     };
     render(
       h(Fragment, null, [
-        h(Comp, { text: 'text1' },'1'),
-        h(Comp, { text: 'text2' },'2'),
-        h(Comp, { id: 'id' },'3'),
+        h(Comp, { text: 'text1' }),
+        h(Comp, { text: 'text2' }),
+        h(Comp, { id: 'id' }),
       ]),
       root
     );
@@ -96,151 +94,249 @@ describe('mount component', () => {
       '<div>text1</div><div>text2</div><div id="id"></div>'
     );
   });
+
+  test('mount nested components', () => {
+    const Comp = {
+      props: ['text'],
+      render(ctx) {
+        return h(Child, { text: ctx.text });
+      },
+    };
+    const Child = {
+      props: ['text'],
+      render(ctx) {
+        return h(Fragment, null, [
+          h('div', null, ctx.text),
+          h(GrandChild, { text: ctx.text, id: 'id' }),
+          h(GrandChild, { text: 'hello' }),
+        ]);
+      },
+    };
+    const GrandChild = {
+      props: ['text'],
+      render(ctx) {
+        return h('p', null, ctx.text);
+      },
+    };
+    // 这个id会被fragment舍弃
+    render(h(Comp, { text: 'text', id: 'id' }), root);
+    expect(root.innerHTML).toBe(
+      '<div>text</div><p id="id">text</p><p>hello</p>'
+    );
+  });
 });
-  
 
-// describe('update component trigger by self', () => {
-//   it('setup result with event and update', async () => {
-//     const Comp = {
-//       setup() {
-//         const counter = ref(0);
-//         const click = () => {
-//           counter.value++;
-//         };
-//         return {
-//           counter,
-//           click,
-//         };
-//       },
-//       render(ctx) {
-//         return h('div', { onClick: ctx.click }, ctx.counter.value);
-//       },
-//     };
-//     render(h(Comp,null,''), root);
-//     expect(root.innerHTML).toBe('<div>0</div>');
+describe('unmount component', () => {
+  test('unmount from root', () => {
+    const Comp = {
+      render() {
+        return h('div');
+      },
+    };
+    render(h(Comp), root);
+    expect(root.innerHTML).toBe('<div></div>');
 
-//     root.children[0].click();
-//     await nextTick();
-//     expect(root.innerHTML).toBe('<div>1</div>');
+    render(null, root);
+    expect(root.innerHTML).toBe('');
+  });
 
-//     root.children[0].click();
-//     root.children[0].click();
-//     await nextTick();
-//     expect(root.innerHTML).toBe('<div>3</div>');
-//   });
+  test('unmount from inner', () => {
+    const Comp = {
+      render() {
+        return h('div');
+      },
+    };
+    render(h('div', null, [h(Comp)]), root);
+    expect(root.innerHTML).toBe('<div><div></div></div>');
 
-//   it('reactive child, style and class', async () => {
-//     const observed = reactive({
-//       child: 'child',
-//       class: 'a',
-//       style: {
-//         color: 'red',
-//       },
-//     });
-//     const Comp = {
-//       setup() {
-//         return {
-//           observed,
-//         };
-//       },
-//       render(ctx) {
-//         return h(
-//           'div',
-//           {
-//             class: ctx.observed.class,
-//             style: ctx.observed.style,
-//           },
-//           ctx.observed.child
-//         );
-//       },
-//     };
-//     render(h(Comp,null,''), root);
-//     expect(root.innerHTML).toBe(
-//       '<div class="a" style="color: red;">child</div>'
-//     );
+    render(h('div'), root);
+    expect(root.innerHTML).toBe('<div></div>');
+  });
 
-//     observed.class = 'b';
-//     await nextTick();
-//     expect(root.innerHTML).toBe(
-//       '<div class="b" style="color: red;">child</div>'
-//     );
+  test('unmount multi components', () => {
+    const Comp = {
+      render() {
+        return h('div');
+      },
+    };
+    render(h(Fragment, null, [h(Comp), h(Comp), h(Comp)]), root);
+    expect(root.innerHTML).toBe('<div></div><div></div><div></div>');
 
-//     observed.style.color = 'blue';
-//     await nextTick();
-//     expect(root.innerHTML).toBe(
-//       '<div class="b" style="color: blue;">child</div>'
-//     );
+    render('', root);
+    expect(root.innerHTML).toBe('');
+  });
 
-//     observed.child = '';
-//     await nextTick();
-//     expect(root.innerHTML).toBe('<div class="b" style="color: blue;"></div>');
-//   });
+  test('unmount nested components', () => {
+    const Comp = {
+      render() {
+        return h(Child);
+      },
+    };
+    const Child = {
+      render() {
+        return h(Fragment, null, [
+          h('div'),
+          h(GrandChild),
+          h('div', null, [h(GrandChild)]),
+        ]);
+      },
+    };
+    const GrandChild = {
+      render() {
+        return h('p');
+      },
+    };
+    render(h(Comp), root);
+    expect(root.innerHTML).toBe('<div></div><p></p><div><p></p></div>');
 
-//   it('observed props', async () => {
-//     const observed = reactive({
-//       child: 'child',
-//       class: 'a',
-//       style: {
-//         color: 'red',
-//       },
-//     });
-//     const Comp = {
-//       render() {
-//         return h('div', observed,'');
-//       },
-//     };
-//     render(h(Comp,null,''), root);
-//     expect(root.innerHTML).toBe(
-//       '<div child="child" class="a" style="color: red;"></div>'
-//     );
+    render(null, root);
+    expect(root.innerHTML).toBe('');
+  });
+});
 
-//     observed.class = 'b';
-//     await nextTick();
-//     expect(root.innerHTML).toBe(
-//       '<div child="child" class="b" style="color: red;"></div>'
-//     );
+describe('update component trigger by self', () => {
+  test('setup result with event and update', async () => {
+    const Comp = {
+      setup() {
+        const counter = ref(0);
+        const click = () => {
+          counter.value++;
+        };
+        return {
+          counter,
+          click,
+        };
+      },
+      render(ctx) {
+        return h('div', { onClick: ctx.click }, ctx.counter.value);
+      },
+    };
+    render(h(Comp), root);
+    expect(root.innerHTML).toBe('<div>0</div>');
 
-//     observed.style.color = 'blue';
-//     await nextTick();
-//     expect(root.innerHTML).toBe(
-//       '<div child="child" class="b" style="color: blue;"></div>'
-//     );
+    root.children[0].click();
+    await nextTick();
+    console.log(root);
+    expect(root.innerHTML).toBe('<div>1</div>');
 
-//     observed.child = '';
-//     await nextTick();
-//     expect(root.innerHTML).toBe(
-//       '<div child="" class="b" style="color: blue;"></div>'
-//     );
-//   });
+    root.children[0].click();
+    root.children[0].click();
+    await nextTick();
+    expect(root.innerHTML).toBe('<div>3</div>');
+  });
 
-//   it('computed and ref props', async () => {
-//     const firstName = ref('james');
-//     const lastName = ref('bond');
-//     const Comp = {
-//       setup() {
-//         const fullName = computed(() => {
-//           return `${firstName.value} ${lastName.value}`;
-//         });
-//         return {
-//           fullName,
-//         };
-//       },
-//       render(ctx) {
-//         return h('div', null, ctx.fullName.value);
-//       },
-//     };
-//     render(h(Comp,null,''), root);
-//     expect(root.innerHTML).toBe('<div>james bond</div>');
+  test('reactive child, style and class', async () => {
+    const observed = reactive({
+      child: 'child',
+      class: 'a',
+      style: {
+        color: 'red',
+      },
+    });
+    const Comp = {
+      setup() {
+        return {
+          observed,
+        };
+      },
+      render(ctx) {
+        return h(
+          'div',
+          {
+            class: ctx.observed.class,
+            style: ctx.observed.style,
+          },
+          ctx.observed.child
+        );
+      },
+    };
+    render(h(Comp), root);
+    expect(root.innerHTML).toBe(
+      '<div class="a" style="color: red;">child</div>'
+    );
 
-//     firstName.value = 'a';
-//     await nextTick();
-//     expect(root.innerHTML).toBe('<div>a bond</div>');
+    observed.class = 'b';
+    await nextTick();
+    expect(root.innerHTML).toBe(
+      '<div class="b" style="color: red;">child</div>'
+    );
 
-//     lastName.value = 'b';
-//     await nextTick();
-//     expect(root.innerHTML).toBe('<div>a b</div>');
-//   });
-// });
+    observed.style.color = 'blue';
+    await nextTick();
+    expect(root.innerHTML).toBe(
+      '<div class="b" style="color: blue;">child</div>'
+    );
+
+    observed.child = '';
+    await nextTick();
+    expect(root.innerHTML).toBe('<div class="b" style="color: blue;"></div>');
+  });
+
+  test('observed props', async () => {
+    const observed = reactive({
+      child: 'child',
+      class: 'a',
+      style: {
+        color: 'red',
+      },
+    });
+    const Comp = {
+      render() {
+        return h('div', observed);
+      },
+    };
+    render(h(Comp), root);
+    expect(root.innerHTML).toBe(
+      '<div child="child" class="a" style="color: red;"></div>'
+    );
+
+    observed.class = 'b';
+    await nextTick();
+    expect(root.innerHTML).toBe(
+      '<div child="child" class="b" style="color: red;"></div>'
+    );
+
+    observed.style.color = 'blue';
+    await nextTick();
+    expect(root.innerHTML).toBe(
+      '<div child="child" class="b" style="color: blue;"></div>'
+    );
+
+    observed.child = '';
+    await nextTick();
+    expect(root.innerHTML).toBe(
+      '<div child="" class="b" style="color: blue;"></div>'
+    );
+  });
+
+  test('computed and ref props', async () => {
+    const firstName = ref('james');
+    const lastName = ref('bond');
+    const Comp = {
+      setup() {
+        const fullName = computed(() => {
+          return `${firstName.value} ${lastName.value}`;
+        });
+        return {
+          fullName,
+        };
+      },
+      render(ctx) {
+        return h('div', null, ctx.fullName.value);
+      },
+    };
+    render(h(Comp), root);
+    expect(root.innerHTML).toBe('<div>james bond</div>');
+
+    firstName.value = 'a';
+    await nextTick();
+    expect(root.innerHTML).toBe('<div>a bond</div>');
+
+    lastName.value = 'b';
+    await nextTick();
+    expect(root.innerHTML).toBe('<div>a b</div>');
+  });
+});
 
 describe('update component trigger by others', () => {
   it('should update an Component tag which is already mounted', () => {
@@ -249,7 +345,7 @@ describe('update component trigger by others', () => {
         return h('div', null, 'foo');
       },
     };
-    render(h(Comp1,null,''), root);
+    render(h(Comp1), root);
     expect(root.innerHTML).toBe('<div>foo</div>');
 
     const Comp2 = {
@@ -257,7 +353,7 @@ describe('update component trigger by others', () => {
         return h('span', null, 'foo');
       },
     };
-    render(h(Comp2,null,''), root);
+    render(h(Comp2), root);
     expect(root.innerHTML).toBe('<span>foo</span>');
 
     const Comp3 = {
@@ -265,25 +361,25 @@ describe('update component trigger by others', () => {
         return h('p', null, 'bar');
       },
     };
-    render(h(Comp3,null,''), root);
+    render(h(Comp3), root);
     expect(root.innerHTML).toBe('<p>bar</p>');
   });
 
-  it('same component with diffrent props', () => {
+  test('same component with diffrent props', () => {
     const Comp = {
       props: ['text'],
       render: (ctx) => {
         return h('p', null, ctx.text);
       },
     };
-    render(h(Comp, { text: 'bar' },''), root);
+    render(h(Comp, { text: 'bar' }), root);
     expect(root.innerHTML).toBe('<p>bar</p>');
 
-    render(h(Comp, { text: 'baz' },''), root);
+    render(h(Comp, { text: 'baz' }), root);
     expect(root.innerHTML).toBe('<p>baz</p>');
   });
 
-  it('element and component switch', () => {
+  test('element and component switch', () => {
     render(h('div', null, [h('div', null, 'child')]), root);
     expect(root.children[0].innerHTML).toBe('<div>child</div>');
 
@@ -292,17 +388,17 @@ describe('update component trigger by others', () => {
         return h('p', null, 'comp');
       },
     };
-    render(h('div', null, [h(Comp,null,'')]), root);
+    render(h('div', null, [h(Comp)]), root);
     expect(root.children[0].innerHTML).toBe('<p>comp</p>');
 
     render(h('div', null, [h('div', null, 'child')]), root);
     expect(root.children[0].innerHTML).toBe('<div>child</div>');
 
-    render(h('div', null, [h(Comp,null,'')]), root);
+    render(h('div', null, [h(Comp)]), root);
     expect(root.children[0].innerHTML).toBe('<p>comp</p>');
   });
 
-  it('component and text switch', () => {
+  test('component and text switch', () => {
     render(h('div', null, [h(Text, null, 'child')]), root);
     expect(root.children[0].innerHTML).toBe('child');
 
@@ -311,19 +407,19 @@ describe('update component trigger by others', () => {
         return h('p', null, 'comp');
       },
     };
-    render(h('div', null, [h(Comp,null,'')]), root);
+    render(h('div', null, [h(Comp)]), root);
     expect(root.children[0].innerHTML).toBe('<p>comp</p>');
 
     render(h('div', null, [h(Text, null, 'child')]), root);
     expect(root.children[0].innerHTML).toBe('child');
 
-    render(h('div', null, [h(Comp,null,'')]), root);
+    render(h('div', null, [h(Comp)]), root);
     expect(root.children[0].innerHTML).toBe('<p>comp</p>');
   });
 
-  it('component and fragment switch', () => {
+  test('component and fragment switch', () => {
     render(
-      h('div', null, [h(Fragment, null, [h('h1',null,''), h(Text, null, 'child')])]),
+      h('div', null, [h(Fragment, null, [h('h1'), h(Text, null, 'child')])]),
       root
     );
     expect(root.children[0].innerHTML).toBe('<h1></h1>child');
@@ -333,20 +429,20 @@ describe('update component trigger by others', () => {
         return h('p', null, 'comp');
       },
     };
-    render(h('div', null, [h(Comp,null,'')]), root);
+    render(h('div', null, [h(Comp)]), root);
     expect(root.children[0].innerHTML).toBe('<p>comp</p>');
 
     render(
-      h('div', null, [h(Fragment, null, [h('h1',null,''), h(Text, null, 'child')])]),
+      h('div', null, [h(Fragment, null, [h('h1'), h(Text, null, 'child')])]),
       root
     );
     expect(root.children[0].innerHTML).toBe('<h1></h1>child');
 
-    render(h('div', null, [h(Comp,null,'')]), root);
+    render(h('div', null, [h(Comp)]), root);
     expect(root.children[0].innerHTML).toBe('<p>comp</p>');
   });
 
-  it('parent element of component change', () => {
+  test('parent element of component change', () => {
     const Comp = {
       props: ['text'],
       render(ctx) {
@@ -354,19 +450,19 @@ describe('update component trigger by others', () => {
       },
     };
 
-    render(h('div', null, [h(Comp,null,'')]), root);
+    render(h('div', null, [h(Comp)]), root);
     expect(root.innerHTML).toBe('<div><p></p></div>');
 
-    render(h('h1', null, [h(Comp, { text: 'text' },''),'']), root);
+    render(h('h1', null, [h(Comp, { text: 'text' })]), root);
     expect(root.innerHTML).toBe('<h1><p>text</p></h1>');
   });
 
-  it('parent props update make child update', async () => {
+  test('parent props update make child update', async () => {
     const text = ref('text');
     const id = ref('id');
     const Parent = {
       render() {
-        return h(Child, { text: text.value, id: id.value },'');
+        return h(Child, { text: text.value, id: id.value });
       },
     };
 
@@ -377,7 +473,7 @@ describe('update component trigger by others', () => {
       },
     };
 
-    render(h(Parent,null,''), root);
+    render(h(Parent), root);
     expect(root.innerHTML).toBe('<div id="id">text</div>');
 
     text.value = 'foo';
@@ -389,7 +485,7 @@ describe('update component trigger by others', () => {
     expect(root.innerHTML).toBe('<div id="bar">foo</div>');
   });
 
-  it('child will not update when props have not change', async () => {
+  test('child will not update when props have not change', async () => {
     const text = ref('text');
     const id = ref('id');
     const anotherText = ref('a');
@@ -397,7 +493,7 @@ describe('update component trigger by others', () => {
       render() {
         return [
           h(Text, null, anotherText.value),
-          h(Child, { text: text.value, id: id.value },''),
+          h(Child, { text: text.value, id: id.value }),
         ];
       },
     };
@@ -411,7 +507,7 @@ describe('update component trigger by others', () => {
       },
     };
 
-    render(h(Parent,null,''), root);
+    render(h(Parent), root);
     expect(root.innerHTML).toBe('a<div id="id">text</div>');
     expect(renderCount).toBe(1);
 
@@ -420,7 +516,7 @@ describe('update component trigger by others', () => {
     expect(root.innerHTML).toBe('b<div id="id">text</div>');
   });
 
-  it('switch child', async () => {
+  test('switch child', async () => {
     const Parent = {
       setup() {
         const toggle = ref(true);
@@ -434,7 +530,7 @@ describe('update component trigger by others', () => {
       },
       render(ctx) {
         return [
-          ctx.toggle.value ? h(Child1,null,'') : h(Child2,null,''),
+          ctx.toggle.value ? h(Child1) : h(Child2),
           h('button', { onClick: ctx.click }, 'click'),
         ];
       },
@@ -442,17 +538,17 @@ describe('update component trigger by others', () => {
 
     const Child1 = {
       render() {
-        return h('div',null,'');
+        return h('div');
       },
     };
 
     const Child2 = {
       render() {
-        return h('p',null,'');
+        return h('p');
       },
     };
 
-    render(h(Parent,null,''), root);
+    render(h(Parent), root);
     expect(root.innerHTML).toBe('<div></div><button>click</button>');
 
     root.children[1].click();
@@ -460,7 +556,7 @@ describe('update component trigger by others', () => {
     expect(root.innerHTML).toBe('<p></p><button>click</button>');
   });
 
-  it('should update parent(hoc) component host el when child component self update', async () => {
+  test('should update parent(hoc) component host el when child component self update', async () => {
     const value = ref(true);
     let parentVnode;
     let childVnode1;
@@ -469,19 +565,19 @@ describe('update component trigger by others', () => {
     const Parent = {
       render: () => {
         // let Parent first rerender
-        return (parentVnode = h(Child,null,''));
+        return (parentVnode = h(Child));
       },
     };
 
     const Child = {
       render: () => {
         return value.value
-          ? (childVnode1 = h('div',null,''))
-          : (childVnode2 = h('span',null,''));
+          ? (childVnode1 = h('div'))
+          : (childVnode2 = h('span'));
       },
     };
 
-    render(h(Parent,null,''), root);
+    render(h(Parent), root);
     expect(root.innerHTML).toBe(`<div></div>`);
     expect(parentVnode.el).toBe(childVnode1.el);
 

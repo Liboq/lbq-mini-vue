@@ -1,74 +1,98 @@
-import { effect } from "../reactivity/effect";
+import { effect,reactive } from "../reactivity";
 import { normalizeVNode } from "./vnode";
 import { queueJob } from './scheduler';
-import { reactive } from '../reactivity/reactive';
-import { compile } from '../compile/compile';
-export const mountComponent = (vnode, container, anchor, patch) => {
+import { compile } from '../compile';
+type Instance = {
+  props: string|null,
+  attrs: null,
+  setupState: null | string,
+  ctx: null | string,
+  subTree: null,
+  isMounted: null | boolean,
+  update: null | { (): any; scheduler: any; } ,
+  next: null,
+}
+type Effect = {
+  (): any; scheduler: any; 
+}
+ export function mountComponent(vnode, container, anchor, patch) {
   const { type: Component } = vnode;
-  const instance = (vnode.component = {
-    props: null || {},
+
+  const instance:{[key:string]:any} = (vnode.component = {
+    props: null,
     attrs: null,
-    setupState: null || {},
-    ctx: null || {},
+    setupState: null,
+    ctx: null,
     subTree: null,
-    isMounted: null ||false,
-    update: null || effect,
+    isMounted: false,
+    update: null,
     next: null,
   });
-  updateProps(instance,vnode);
+
+  updateProps(instance, vnode);
+
   instance.setupState = Component.setup?.(instance.props, {
     attrs: instance.attrs,
   });
+
   instance.ctx = {
     ...instance.props,
     ...instance.setupState,
   };
+
   if (!Component.render && Component.template) {
     let { template } = Component;
-    if (template[0] === "#") {
+    if (template[0] === '#') {
       const el = document.querySelector(template);
-      template = el ? el.innerHTML : "";
-
+      template = el ? el.innerHTML : '';
     }
-    // 编译
-    const code:any= compile(template)
-    Component.render = new Function('ctx',code)
+    const code = compile(template);
+    Component.render = new Function('ctx', code);
     console.log(Component.render);
-    
   }
-  instance.update = effect(() => {
-    if (!instance.isMounted) {
-      // mount
-      const subTree = (instance.subTree = normalizeVNode(
-        Component.render(instance.ctx)
-      ));
-      fallThrough(instance,subTree)
 
-      patch(null,subTree,container,anchor)
-      vnode.el = subTree.el;
-      instance.isMounted = true
-    }else{
+  instance.update = effect(
+    () => {
+      if (!instance.isMounted) {
+        // mount
+        const subTree = (instance.subTree = normalizeVNode(
+          Component.render(instance.ctx)
+        ));
+
+        fallThrough(instance, subTree);
+
+        patch(null, subTree, container, anchor);
+        vnode.el = subTree.el;
+        instance.isMounted = true;
+      } else {
         // update
-        if(instance.next){
-            vnode = instance.next
-            instance.next = null
-            updateProps(instance,vnode)
-            instance.ctx = {
-                ...instance.props,
-                ...instance.setupState
-            }
+        if (instance.next) {
+          // 被动更新
+          vnode = instance.next;
+          instance.next = null;
+          updateProps(instance, vnode);
+          instance.ctx = {
+            ...instance.props,
+            ...instance.setupState,
+          };
         }
-        const prev = instance.subTree
-        const subTree = (instance.subTree = normalizeVNode(Component.reder(instance.ctx)))
-        fallThrough(prev,subTree)
-        patch(prev,subTree,container,anchor)
-        vnode.el = subTree.el
 
+        const prev = instance.subTree;
+        const subTree = (instance.subTree = normalizeVNode(
+          Component.render(instance.ctx)
+        ));
+
+        fallThrough(instance, subTree);
+
+        patch(prev, subTree, container, anchor);
+        vnode.el = subTree.el;
+      }
+    },
+    {
+      scheduler: queueJob,
     }
-  },{
-    scheduler:queueJob
-  });
-};
+  );
+}
 export const updateProps = (instance,vnode) => {
     const { type:Component ,props:vnodeProps } = vnode
     const props = (instance.props = {})

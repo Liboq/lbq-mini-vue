@@ -11,7 +11,12 @@ export const effect = (fn, options: any = {}) => {
       return fn();
     } finally {
       effectStack.pop()
+      if(effectStack.length-1>0){
       activeEffect = effectStack[effectStack.length-1]
+
+      }else{
+        activeEffect = null
+      }
     }
   };
   if (!options.lazy) {
@@ -49,7 +54,7 @@ export const trigger = (target, key) => {
   }
   deps.forEach((effectFn) => {
     if (effectFn.scheduler) {
-      effectFn.scheduler();
+      effectFn.scheduler(effectFn);
     } else {
       effectFn();
     }

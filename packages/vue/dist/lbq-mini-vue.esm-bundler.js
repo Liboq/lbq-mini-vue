@@ -16,6 +16,12 @@ const isNumber = (value) => {
 const isBoolean = (value) => {
     return typeof value === "boolean";
 };
+const camelize = (str) => {
+    return str.replace(/-(\w)/g, (_, c) => (c ? c.toUpperCase() : ''));
+};
+const capitalize = (str) => {
+    return str[0].toUpperCase() + str.slice(1);
+};
 
 /*
  * @Author: Liboq 99778162+Liboq@users.noreply.github.com
@@ -84,7 +90,7 @@ function normalizeVNode(result) {
     return h(Text, null, result.toString());
 }
 
-const domPropsRE$1 = /[A-Z]|^(next|checked|selected|muted|disabled)$/;
+const domPropsRE = /[A-Z]|^(next|checked|selected|muted|disabled)$/;
 const patchProps = (oldProps, newProps, el) => {
     if (oldProps === newProps) {
         return;
@@ -94,7 +100,10 @@ const patchProps = (oldProps, newProps, el) => {
             continue;
         }
         const next = newProps[key];
-        const prev = oldProps[key];
+        let prev;
+        if (oldProps && oldProps[key]) {
+            prev = oldProps[key] || "";
+        }
         if (next !== prev) {
             patchDomProp(prev, next, key, el);
         }
@@ -103,7 +112,7 @@ const patchProps = (oldProps, newProps, el) => {
     newProps = newProps || {};
     for (const key in oldProps) {
         const next = newProps[key];
-        const prev = oldProps[key];
+        const prev = oldProps[key] || null;
         if (key !== 'key' && next == null) {
             patchDomProp(prev, null, key, el);
         }
@@ -140,7 +149,7 @@ const patchDomProp = (prev, next, key, el) => {
                     el.addEventListener(eventName, next);
                 }
             }
-            else if (domPropsRE$1.test(key)) {
+            else if (domPropsRE.test(key)) {
                 if (next === "" && isBoolean(el[key])) {
                     next = true;
                 }
@@ -172,7 +181,12 @@ const effect = (fn, options = {}) => {
         }
         finally {
             effectStack.pop();
-            activeEffect = effectStack[effectStack.length - 1];
+            if (effectStack.length - 1 > 0) {
+                activeEffect = effectStack[effectStack.length - 1];
+            }
+            else {
+                activeEffect = null;
+            }
         }
     };
     if (!options.lazy) {
@@ -210,40 +224,12 @@ const trigger = (target, key) => {
     }
     deps.forEach((effectFn) => {
         if (effectFn.scheduler) {
-            effectFn.scheduler();
+            effectFn.scheduler(effectFn);
         }
         else {
             effectFn();
         }
     });
-};
-
-const queue = [];
-let isFlushing = false;
-const resolvePromise = Promise.resolve();
-const queueJob = (job) => {
-    if (!queue.length && !queue.includes(job)) {
-        queue.push(job);
-        queueFlush();
-    }
-};
-const queueFlush = () => {
-    if (!isFlushing) {
-        isFlushing = true;
-        resolvePromise.then(flushJobs);
-    }
-};
-const flushJobs = () => {
-    try {
-        for (let i = 0; i < queue.length; i++) {
-            const job = queue[i];
-            job();
-        }
-    }
-    catch (error) {
-        isFlushing = false;
-        queue.lengh = 0;
-    }
 };
 
 /*
@@ -298,17 +284,477 @@ const isReactive = (target) => {
     return !!(target && target.__isReactive);
 };
 
-const mountComponent = (vnode, container, anchor, patch) => {
+const ref = (value) => {
+    if (isRef(value)) {
+        return value;
+    }
+    return new RefImple(value);
+};
+/*
+ref实现类
+*/
+class RefImple {
+    constructor(value) {
+        this.__isRef = true;
+        this._value = convert(value);
+    }
+    get value() {
+        track(this, "value");
+        return this._value;
+    }
+    set value(newValue) {
+        if (hasChanged(this._value, newValue)) {
+            this._value = convert(newValue);
+            trigger(this, "value");
+        }
+    }
+}
+const convert = (value) => {
+    return isObject(value) ? reactive(value) : value;
+};
+const isRef = (value) => {
+    return !!(value && value.__isRef);
+};
+
+const queue = [];
+let isFlushing = false;
+const resolvePromise = Promise.resolve();
+const queueJob = (job) => {
+    if (!queue.length && !queue.includes(job)) {
+        queue.push(job);
+        queueFlush();
+    }
+};
+const queueFlush = () => {
+    if (!isFlushing) {
+        isFlushing = true;
+        resolvePromise.then(flushJobs);
+    }
+};
+const flushJobs = () => {
+    try {
+        for (let i = 0; i < queue.length; i++) {
+            const job = queue[i];
+            job();
+        }
+    }
+    catch (error) {
+        isFlushing = false;
+        queue.lengh = 0;
+    }
+};
+
+const NodeTypes = {
+    ROOT: "ROOT",
+    ELEMENT: "ELEMENT",
+    TEXT: "TEXT",
+    SIMPLE_EXPRESSION: 'SIMPLE_EXPRESSION',
+    INTERPOLATION: "INTERPOLATION",
+    ATTRIBUTE: "ATTRIBUTE",
+    DIRECTIVE: "DIRECTIVE"
+};
+const ElementTypes = {
+    ELEMENT: 'ELEMENT',
+    COMPONENT: "COMPONENT"
+};
+const createRoot = (children) => {
+    return {
+        type: NodeTypes.ROOT,
+        children
+    };
+};
+
+const parse = (content) => {
+    const context = createParseContext(content);
+    const children = parseChildren(context);
+    return createRoot(children);
+};
+const createParseContext = (content) => {
+    return {
+        options: {
+            delimiters: ["{{", "}}"],
+            isVoidTag,
+            isNativeTag
+        },
+        source: content
+    };
+};
+const parseChildren = (context) => {
+    const nodes = [];
+    // 判断是否是</开头
+    while (!isEnd(context)) {
+        const s = context.source;
+        let node;
+        if (s.startsWith(context.options.delimiters[0])) {
+            node = parseInterpolation(context);
+        }
+        else if (s[0] === '<') {
+            node = parseElement(context);
+        }
+        else {
+            node = parseText(context);
+        }
+        nodes.push(node);
+    }
+    let removedWhitespaces = false;
+    for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i];
+        if (node.type === NodeTypes.TEXT) {
+            // 区分文本节点是否全为空白
+            if (/[^\t\r\f\n ]/.test(node.content)) {
+                // 文本节点的一些字符
+                node.content = node.content.replace(/[\t\r\f\n ]+/g, " ");
+            }
+            else {
+                const prev = nodes[i - 1];
+                const next = nodes[i + 1];
+                if (!prev || !next || (prev.type === NodeTypes.ELEMENT && next.type === NodeTypes.ELEMENT && /[\r\n]/.test(node.content))) {
+                    // 删除空白节点
+                    removedWhitespaces = true;
+                    nodes[i] = null;
+                }
+                else {
+                    node.content = " ";
+                }
+            }
+        }
+    }
+    return removedWhitespaces ? nodes.filter(Boolean) : nodes;
+};
+const parseText = (context) => {
+    const endTokens = ["<", context.options.delimiters[0]];
+    let endIndex = context.source.length;
+    for (let i = 0; i < endTokens.length; i++) {
+        let index = context.source.indexOf(endTokens[i]);
+        if (index !== -1 && index < endIndex) {
+            endIndex = index;
+        }
+    }
+    const content = parseTextData(context, endIndex);
+    return {
+        type: NodeTypes.TEXT,
+        content
+    };
+};
+const parseTextData = (context, length) => {
+    const text = context.source.slice(0, length);
+    advanceBy(context, length);
+    return text;
+};
+const parseInterpolation = (context) => {
+    const [open, close] = context.options.delimiters;
+    advanceBy(context, open.length);
+    const closeIndex = context.source.indexOf(close);
+    const content = parseTextData(context, closeIndex).trim();
+    advanceBy(context, close.length);
+    return {
+        type: NodeTypes.INTERPOLATION,
+        content: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content,
+            isStatic: false
+        }
+    };
+};
+const parseElement = (context) => {
+    // start
+    const element = parseTag(context);
+    if (element.isSelfClosing || context.options.isVoidTag(element.tag)) {
+        return element;
+    }
+    // parseChildren
+    element.children = parseChildren(context);
+    // end tag
+    parseTag(context);
+    return element;
+};
+const parseTag = (context) => {
+    const match = /^<\/?([a-z][^\t\r\n\f />]*)/i.exec(context.source);
+    const tag = match[1];
+    advanceBy(context, match[0].length);
+    advanceSpaces(context);
+    const { props, directives } = parseAttributes(context);
+    const isSelfClosing = context.source.startsWith('/>');
+    advanceBy(context, isSelfClosing ? 2 : 1);
+    const tagType = isComponent(tag, context)
+        ? ElementTypes.COMPONENT
+        : ElementTypes.ELEMENT;
+    return {
+        type: NodeTypes.ELEMENT,
+        tag,
+        tagType,
+        props,
+        directives,
+        isSelfClosing,
+        children: [],
+    };
+};
+function isComponent(tag, context) {
+    return !context.options.isNativeTag(tag);
+}
+function parseAttributes(context) {
+    const props = [];
+    const directives = [];
+    while (context.source.length &&
+        !context.source.startsWith('>') &&
+        !context.source.startsWith('/>')) {
+        let attr = parseAttribute(context);
+        if (attr.type === NodeTypes.DIRECTIVE) {
+            directives.push(attr);
+        }
+        else {
+            props.push(attr);
+        }
+    }
+    return { props, directives };
+}
+function parseAttribute(context) {
+    const match = /^[^\t\r\n\f />][^\t\r\n\f />=]*/.exec(context.source);
+    const name = match[0];
+    advanceBy(context, name.length);
+    advanceSpaces(context);
+    let value;
+    if (context.source[0] === '=') {
+        advanceBy(context, 1);
+        advanceSpaces(context);
+        value = parseAttributeValue(context);
+        advanceSpaces(context);
+    }
+    // Directive
+    if (/^(:|@|v-)/.test(name)) {
+        let dirName, argContent;
+        if (name[0] === ':') {
+            dirName = 'bind';
+            argContent = name.slice(1);
+        }
+        else if (name[0] === '@') {
+            dirName = 'on';
+            argContent = name.slice(1);
+        }
+        else if (name.startsWith('v-')) {
+            [dirName, argContent] = name.slice(2).split(':');
+        }
+        return {
+            type: NodeTypes.DIRECTIVE,
+            name: dirName,
+            exp: value && {
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                content: value.content,
+                isStatic: false,
+            },
+            arg: argContent && {
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                content: camelize(argContent),
+                isStatic: true,
+            }, // 表达式节点
+        };
+    }
+    // Attribute
+    return {
+        type: NodeTypes.ATTRIBUTE,
+        name,
+        value: value && {
+            type: NodeTypes.TEXT,
+            content: value.content,
+        },
+    };
+}
+const parseAttributeValue = (context) => {
+    const quote = context.source[0];
+    advanceBy(context, 1);
+    const endIndex = context.source.indexOf(quote);
+    const content = parseTextData(context, endIndex);
+    advanceBy(context, 1);
+    return { content };
+};
+const advanceSpaces = (context) => {
+    const match = /^[\t\r\n\f ]+/.exec(context.source);
+    if (match) {
+        advanceBy(context, match[0].length);
+    }
+};
+const isEnd = (context) => {
+    const s = context.source;
+    return s.startsWith('</') || !s;
+};
+const advanceBy = (context, numberOfCharacters) => {
+    context.source = context.source.slice(numberOfCharacters);
+};
+
+const generate = (ast) => {
+    const returns = traverseNode(ast);
+    const code = `with(ctx){
+        const {h,Text,Fragment,readerList,withModel,resloveComponent} = miniVue;
+        return  ${returns}
+    }`;
+    return code;
+};
+const traverseNode = (node, parent) => {
+    switch (node.type) {
+        case NodeTypes.ROOT:
+            if (node.children.length === 1) {
+                return traverseNode(node.children[0], node);
+            }
+            let result = traverseChildren(node);
+            result = result.slice(1, -1);
+            return result;
+        case NodeTypes.ELEMENT:
+            return resolveElementASTNode(node, parent);
+        case NodeTypes.INTERPOLATION:
+            return createTextVNode(node.content);
+        case NodeTypes.TEXT:
+            return createTextVNode(node);
+    }
+};
+const traverseChildren = (node) => {
+    const { children } = node;
+    if (children.length === 1) {
+        const child = children[0];
+        if (child.type === NodeTypes.TEXT) {
+            return createText(child);
+        }
+        if (child.type === NodeTypes.INTERPOLATION) {
+            return createText(child.content);
+        }
+    }
+    const results = [];
+    for (let i = 0; i < children.length; i++) {
+        const child = children[i];
+        results.push(traverseNode(child, node));
+    }
+    return `[${results.join(", ")}]`;
+};
+// 专门处理特殊指令
+const resolveElementASTNode = (node, parent) => {
+    const ifNode = pluck(node.directives, "if") || pluck(node.directives, "else-if");
+    if (ifNode) {
+        let consequent = resolveElementASTNode(node, parent);
+        let alternate;
+        const { children } = parent;
+        let i = children.findIndex((child) => child === node) + 1;
+        for (; i < children.length; i++) {
+            const sibling = children[i];
+            if (sibling.type === NodeTypes.TEXT && !sibling.content.trim()) {
+                children.splice(i, 1);
+                i--;
+                continue;
+            }
+            if (sibling.type === NodeTypes.ELEMENT) {
+                if (pluck(sibling.directives, "else") ||
+                    pluck(sibling.directives, "else-if", false)) {
+                    alternate = resolveElementASTNode(sibling, parent);
+                    children.splice(i, 1);
+                }
+            }
+            break;
+        }
+        const { exp } = ifNode;
+        return `${exp.content} ? ${consequent} : ${alternate || createTextVNode()}`;
+    }
+    const forNode = pluck(node.directives, "for");
+    if (forNode) {
+        const { exp } = forNode;
+        const [args, source] = exp.content.split(/\sin\s|\sof\s/);
+        return `h(Fragment, null, renderList(${source.trim()}, ${args.trim()} => ${resolveElementASTNode(node, parent)}))`;
+    }
+    return createElementVNode(node);
+};
+const createElementVNode = (node) => {
+    const { children, tagType } = node;
+    const tag = tagType === NodeTypes.ELEMENT
+        ? `"${node.tag}"`
+        : `resolveComponent("${node.tag}")`;
+    const propArr = createPropArr(node);
+    let propStr = propArr.length ? `{ ${propArr.join(", ")} }` : "null";
+    const vmodel = pluck(node.directives, "model");
+    if (vmodel) {
+        const getter = `()=>${createText(vmodel.exp)}`;
+        const setter = `(value)=>${createText(vmodel.exp)} = value`;
+        propStr = `withModle(${tag},${propStr},${getter},${setter})`;
+    }
+    if (!children.length) {
+        if (propStr === "null") {
+            return `h(${tag})`;
+        }
+        return `h(${tag}, ${propStr})`;
+    }
+    let childrenStr = traverseChildren(node);
+    return `h(${tag}, ${propStr}, ${childrenStr})`;
+};
+const createPropArr = (node) => {
+    const { props, directives } = node;
+    return [
+        ...props.map((prop) => `${prop.name}: ${createText(prop.value)}`),
+        ...directives.map((dir) => {
+            switch (dir.name) {
+                case "bind":
+                    return `${dir.arg.content}: ${createText(dir.exp)}`;
+                case "on":
+                    const eventName = `on${capitalize(dir.arg.content)}`;
+                    let exp = dir.exp.content;
+                    if (/\([^)]*?\)$/.test(exp) && !exp.includes("=>")) {
+                        exp = `$event => (${exp})`;
+                    }
+                    return `${eventName}: ${exp}`;
+                case "html":
+                    return `innerHTML: ${createText(dir.exp)} `;
+                default:
+                    return `${dir.name}: ${createText(dir.exp)}`;
+            }
+        }),
+    ];
+};
+const createTextVNode = (node) => {
+    const child = createText(node);
+    return `h(Text, null, ${child})`;
+};
+const createText = ({ isStatic = true, content = "" } = {}) => {
+    return isStatic ? JSON.stringify(content) : content;
+};
+const pluck = (directives, name, remove = true) => {
+    const index = directives.findIndex((dir) => dir.name === name);
+    const dir = directives[index];
+    if (index > -1 && remove) {
+        directives.splice(index, 1);
+    }
+    return dir;
+};
+
+const compile = (template) => {
+    const ast = parse(template);
+    return generate(ast);
+};
+
+const HTML_TAGS = 'html,body,base,head,link,meta,style,title,address,article,aside,footer,' +
+    'header,h1,h2,h3,h4,h5,h6,hgroup,nav,section,div,dd,dl,dt,figcaption,' +
+    'figure,picture,hr,img,li,main,ol,p,pre,ul,a,b,abbr,bdi,bdo,br,cite,code,' +
+    'data,dfn,em,i,kbd,mark,q,rp,rt,rtc,ruby,s,samp,small,span,strong,sub,sup,' +
+    'time,u,var,wbr,area,audio,map,track,video,embed,object,param,source,' +
+    'canvas,script,noscript,del,ins,caption,col,colgroup,table,thead,tbody,td,' +
+    'th,tr,button,datalist,fieldset,form,input,label,legend,meter,optgroup,' +
+    'option,output,progress,select,textarea,details,dialog,menu,' +
+    'summary,template,blockquote,iframe,tfoot';
+const VOID_TAGS = 'area,base,br,col,embed,hr,img,input,link,meta,param,source,track,wbr';
+function makeMap(str) {
+    const map = str
+        .split(',')
+        .reduce((map, item) => ((map[item] = true), map), Object.create(null));
+    return (val) => !!map[val];
+}
+const isVoidTag = makeMap(VOID_TAGS);
+const isNativeTag = makeMap(HTML_TAGS);
+
+function mountComponent(vnode, container, anchor, patch) {
     var _a;
     const { type: Component } = vnode;
     const instance = (vnode.component = {
-        props: {},
+        props: null,
         attrs: null,
-        setupState: {},
-        ctx: {},
+        setupState: null,
+        ctx: null,
         subTree: null,
         isMounted: false,
-        update: effect,
+        update: null,
         next: null,
     });
     updateProps(instance, vnode);
@@ -318,13 +764,12 @@ const mountComponent = (vnode, container, anchor, patch) => {
     instance.ctx = Object.assign(Object.assign({}, instance.props), instance.setupState);
     if (!Component.render && Component.template) {
         let { template } = Component;
-        if (template[0] === "#") {
+        if (template[0] === '#') {
             const el = document.querySelector(template);
-            template = el ? el.innerHTML : "";
+            template = el ? el.innerHTML : '';
         }
-        // 编译
-        // const code = compile(template)
-        Component.render = new Function('ctx', template);
+        const code = compile(template);
+        Component.render = new Function('ctx', code);
         console.log(Component.render);
     }
     instance.update = effect(() => {
@@ -339,21 +784,22 @@ const mountComponent = (vnode, container, anchor, patch) => {
         else {
             // update
             if (instance.next) {
+                // 被动更新
                 vnode = instance.next;
                 instance.next = null;
                 updateProps(instance, vnode);
                 instance.ctx = Object.assign(Object.assign({}, instance.props), instance.setupState);
             }
             const prev = instance.subTree;
-            const subTree = (instance.subTree = normalizeVNode(Component.reder(instance.ctx)));
-            fallThrough(prev, subTree);
+            const subTree = (instance.subTree = normalizeVNode(Component.render(instance.ctx)));
+            fallThrough(instance, subTree);
             patch(prev, subTree, container, anchor);
             vnode.el = subTree.el;
         }
     }, {
-        scheduler: queueJob
+        scheduler: queueJob,
     });
-};
+}
 const updateProps = (instance, vnode) => {
     var _a;
     const { type: Component, props: vnodeProps } = vnode;
@@ -377,14 +823,12 @@ const fallThrough = (instance, subTree) => {
 
 const render = (vnode, container) => {
     const prevVNode = container._vnode;
-    console.log(container._vnode);
     if (!vnode) {
         if (prevVNode) {
             unmount(prevVNode);
         }
     }
     else {
-        console.log(prevVNode);
         patch(prevVNode, vnode, container, null);
     }
     container._vnode = vnode;
@@ -403,8 +847,6 @@ const unmount = (vnode) => {
 };
 const patch = (n1, n2, container, anchor) => {
     if (n1 && !isSameNode(n1, n2)) {
-        console.log(n1);
-        debugger;
         anchor = (n1.anchor || n1.el).nextSibling;
         unmount(n1);
         n1 = null;
@@ -689,9 +1131,6 @@ const isSameNode = (n1, n2) => {
 const mountTextNode = (vnode, container, anchor) => {
     const textNode = document.createTextNode(vnode.children);
     // container.appendChild(textNode);
-    console.log(anchor);
-    console.dir(textNode);
-    console.log(vnode);
     if (anchor && anchor.textContent == '') {
         container.appendChild(textNode);
     }
@@ -708,7 +1147,6 @@ const mountChildren = (children, container, anchor) => {
 const mountElement = (vnode, container, anchor) => {
     const { shapeFlag, props, type, children } = vnode;
     const el = document.createElement(type);
-    mountProps(props, el);
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
         mountTextNode(vnode, el, anchor);
     }
@@ -720,44 +1158,7 @@ const mountElement = (vnode, container, anchor) => {
     }
     // container.appendChild(el);
     container.insertBefore(el, anchor);
-    console.log(el);
     vnode.el = el;
-};
-const domPropsRE = /[A-Z]|^(next|checked|selected|muted|disabled)$/;
-const mountProps = (props, el) => {
-    for (const key in props) {
-        let next = props[key];
-        switch (key) {
-            case "class":
-                el.className = next;
-                break;
-            case "style":
-                for (const styleName in next) {
-                    el.style[styleName] = next[styleName];
-                }
-                break;
-            default:
-                if (/^on[^a-z]/.test(key)) {
-                    const eventName = key.slice(2).toLowerCase();
-                    el.addEventListener(eventName, next);
-                }
-                else if (domPropsRE.test(key)) {
-                    if (next === "" && isBoolean(el[key])) {
-                        next = true;
-                    }
-                    el[key] = next;
-                }
-                else {
-                    if (next == null || next === false) {
-                        el.removeAttribute(key);
-                    }
-                    else {
-                        el.setAttribute(key, next);
-                    }
-                }
-                break;
-        }
-    }
 };
 
 // const vnode = 
@@ -796,11 +1197,37 @@ const mountProps = (props, el) => {
 //   ]),
 //   document.body
 // );
-render(h('div', null, [h(Fragment, null, [h('h1', null, ''), h(Text, null, 'child')])]), document.body);
-const Comp = {
-    render() {
-        return h('p', null, 'comp');
+// render(
+//   h('div', null, [h(Fragment, null, [h('h1',null,''), h(Text, null, 'child')])]),
+//   document.body
+// );
+// const Comp = {
+//   render() {
+//     return h('p', null, 'comp');
+//   },
+// };
+// render(h('div', null, [h(Comp,null,'')]), document.body);
+const value = ref(true);
+let childVnode1;
+let childVnode2;
+const Parent = {
+    render: () => {
+        // let Parent first rerender
+        return (h(Child));
     },
 };
-render(h('div', null, [h(Comp, null, '')]), document.body);
+const Child = {
+    render: () => {
+        return value.value
+            ? (childVnode1 = h('div', null, `${value.value}`))
+            : (childVnode2 = h('span', null, 2));
+    },
+};
+setTimeout(() => {
+    value.value = false;
+    console.log(value.value);
+    console.dir(childVnode1, childVnode2);
+}, 5000);
+render(h(Parent), document.body);
+console.dir(childVnode1, childVnode2);
 //# sourceMappingURL=lbq-mini-vue.esm-bundler.js.map

@@ -1,4 +1,4 @@
-import { isNativeTag, isVoidTag } from '.';
+import { isNativeTag, isVoidTag } from './index';
 import { NodeTypes, createRoot, ElementTypes } from './ast';
 import { camelize } from '../utils/index';
 export const parse = (content)=>{

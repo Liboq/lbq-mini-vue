@@ -1,0 +1,114 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: parse > Element > self closing multiple tag 1`] = `
+{
+  "children": [
+    {
+      "children": [],
+      "directives": [
+        {
+          "arg": {
+            "content": "class",
+            "isStatic": true,
+            "type": "SIMPLE_EXPRESSION",
+          },
+          "exp": {
+            "content": "{ some: condition }",
+            "isStatic": false,
+            "type": "SIMPLE_EXPRESSION",
+          },
+          "name": "bind",
+          "type": "DIRECTIVE",
+        },
+      ],
+      "isSelfClosing": true,
+      "props": [],
+      "tag": "div",
+      "tagType": "ELEMENT",
+      "type": "ELEMENT",
+    },
+    {
+      "children": [],
+      "directives": [
+        {
+          "arg": {
+            "content": "style",
+            "isStatic": true,
+            "type": "SIMPLE_EXPRESSION",
+          },
+          "exp": {
+            "content": "{ color: 'red' }",
+            "isStatic": false,
+            "type": "SIMPLE_EXPRESSION",
+          },
+          "name": "bind",
+          "type": "DIRECTIVE",
+        },
+      ],
+      "isSelfClosing": true,
+      "props": [],
+      "tag": "p",
+      "tagType": "ELEMENT",
+      "type": "ELEMENT",
+    },
+  ],
+  "type": "ROOT",
+}
+`;
+
+exports[`compiler: parse > Element > valid html 1`] = `
+{
+  "children": [
+    {
+      "children": [
+        {
+          "children": [],
+          "directives": [
+            {
+              "arg": {
+                "content": "style",
+                "isStatic": true,
+                "type": "SIMPLE_EXPRESSION",
+              },
+              "exp": {
+                "content": "{ color: 'red' }",
+                "isStatic": false,
+                "type": "SIMPLE_EXPRESSION",
+              },
+              "name": "bind",
+              "type": "DIRECTIVE",
+            },
+          ],
+          "isSelfClosing": true,
+          "props": [],
+          "tag": "p",
+          "tagType": "ELEMENT",
+          "type": "ELEMENT",
+        },
+      ],
+      "directives": [
+        {
+          "arg": {
+            "content": "class",
+            "isStatic": true,
+            "type": "SIMPLE_EXPRESSION",
+          },
+          "exp": {
+            "content": "{ some: condition }",
+            "isStatic": false,
+            "type": "SIMPLE_EXPRESSION",
+          },
+          "name": "bind",
+          "type": "DIRECTIVE",
+        },
+      ],
+      "isSelfClosing": false,
+      "props": [],
+      "tag": "div",
+      "tagType": "ELEMENT",
+      "type": "ELEMENT",
+    },
+  ],
+  "type": "ROOT",
+}
+`;

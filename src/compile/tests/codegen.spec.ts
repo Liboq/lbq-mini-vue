@@ -35,6 +35,6 @@ describe('test codegen independent', () => {
       },
     });
     const code = generate(ast);
-    expect(code).toBe('h(Text,null,foo)');
+    expect(code).toBe('h(Text, null, foo)');
   });
 });

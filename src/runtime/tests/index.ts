@@ -1,5 +1,6 @@
 import { h, render } from "../../runtime/index";
 import { Fragment, Text } from '../vnode';
+import { ref } from '../../reactivity/ref';
 
 // const vnode = 
 //         h("ul", null, [
@@ -37,14 +38,44 @@ import { Fragment, Text } from '../vnode';
 //   ]),
 //   document.body
 // );
-render(
-  h('div', null, [h(Fragment, null, [h('h1',null,''), h(Text, null, 'child')])]),
-  document.body
-);
+// render(
+//   h('div', null, [h(Fragment, null, [h('h1',null,''), h(Text, null, 'child')])]),
+//   document.body
+// );
 
-const Comp = {
-  render() {
-    return h('p', null, 'comp');
+// const Comp = {
+//   render() {
+//     return h('p', null, 'comp');
+//   },
+// };
+// render(h('div', null, [h(Comp,null,'')]), document.body);
+
+const value = ref(true);
+let parentVnode;
+let childVnode1;
+let childVnode2;
+
+const Parent = {
+  render: () => {
+    // let Parent first rerender
+    return (parentVnode = h(Child));
   },
 };
-render(h('div', null, [h(Comp,null,'')]), document.body);
+
+const Child = {
+  render: () => {
+    return value.value
+      ? (childVnode1 = h('div',null,`${value.value}`))
+      : (childVnode2 = h('span',null,2));
+  },
+};
+setTimeout(()=>{
+  value.value = false
+  console.log(value.value);
+  
+  console.dir(childVnode1,childVnode2);
+},5000)
+
+render(h(Parent), document.body);
+console.dir(childVnode1,childVnode2);
+

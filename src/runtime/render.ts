@@ -1,18 +1,13 @@
-import { isBoolean } from "../utils/index";
 import { patchProps } from "./patchProps";
 import { ShapeFlags } from "./vnode";
 import { mountComponent } from './component';
 export const render = (vnode, container) => {
   const prevVNode = container._vnode;
-  console.log(container._vnode);
-  
-  
   if (!vnode) {
     if (prevVNode) {
       unmount(prevVNode);
     }
   } else {
-  console.log(prevVNode);
     patch(prevVNode, vnode, container, null);
   }
   
@@ -30,8 +25,6 @@ export const unmount = (vnode) => {
 };
 export const patch = (n1, n2, container, anchor) => {
   if (n1 && !isSameNode(n1, n2)) {
-    console.log(n1);
-    debugger
     anchor = (n1.anchor || n1.el).nextSibling;
     unmount(n1);
     n1 = null;
@@ -120,7 +113,7 @@ export const pathchkeyedArrayChildren2 = (c1, c2, container, anchor) => {
   let maxNewIndexSoFar = 0;
   for (let i = 0; i < c2.lenght; i++) {
     const next = c2[i];
-    const curAnchor = i === 0 ? c1[0].el : c2[i].el.nextSibling;
+    const curAnchor = i === 0 ? c1[0].el : c2[i-1].el.nextSibling;
     if (map.has(next.key)) {
       const { prev, j } = map.get(next.key);
       patch(prev, next, container, curAnchor);
@@ -344,15 +337,11 @@ export const isSameNode = (n1, n2) => {
 export const mountTextNode = (vnode, container, anchor) => {
   const textNode = document.createTextNode(vnode.children);
   // container.appendChild(textNode);
-  console.log(anchor);
-  console.dir(textNode);
-  console.log(vnode);
   if(anchor&&anchor.textContent ==''){
   container.appendChild(textNode);
 
   }else{
   container.insertBefore(textNode, anchor);
-
   }
   vnode.el = textNode;
 };
@@ -367,7 +356,6 @@ export const mountChildren = (children, container, anchor) => {
 export const mountElement = (vnode, container, anchor) => {
   const { shapeFlag, props, type, children } = vnode;
   const el = document.createElement(type);
-  mountProps(props, el);
   if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
     mountTextNode(vnode, el, anchor);
   } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
@@ -378,41 +366,5 @@ export const mountElement = (vnode, container, anchor) => {
   }
   // container.appendChild(el);
   container.insertBefore(el, anchor);
-  console.log(el);
-  
   vnode.el = el;
-};
-const domPropsRE = /[A-Z]|^(next|checked|selected|muted|disabled)$/;
-
-export const mountProps = (props, el) => {
-  for (const key in props) {
-    let next = props[key];
-    switch (key) {
-      case "class":
-        el.className = next;
-        break;
-      case "style":
-        for (const styleName in next) {
-          el.style[styleName] = next[styleName];
-        }
-        break;
-      default:
-        if (/^on[^a-z]/.test(key)) {
-          const eventName = key.slice(2).toLowerCase();
-          el.addEventListener(eventName, next);
-        } else if (domPropsRE.test(key)) {
-          if (next === "" && isBoolean(el[key])) {
-            next = true;
-          }
-          el[key] = next;
-        } else {
-          if (next == null || next === false) {
-            el.removeAttribute(key);
-          } else {
-            el.setAttribute(key, next);
-          }
-        }
-        break;
-    }
-  }
 };

@@ -97,12 +97,12 @@ describe('compiler: integration tests', () => {
 
     test('v-if + v-else', () => {
       const code = compile('<div v-if="ok"/><p v-else/>');
-      expect(code).toBe('ok ? h("div") : h("p")');
+      expect(code).toBe('[ok ? h("div") : h("p")]');
     });
 
     test('v-if + v-else-if', () => {
       const code = compile('<div v-if="ok"/><p v-else-if="orNot"/>');
-      expect(code).toBe('ok ? h("div") : orNot ? h("p") : h(Text, null, "")');
+      expect(code).toBe('[ok ? h("div") : orNot ? h("p") : h(Text, null, "")]');
     });
 
     test('v-if + v-else-if + v-else', () => {
@@ -110,7 +110,7 @@ describe('compiler: integration tests', () => {
         '<div v-if="ok"/><p v-else-if="orNot"/><h1 v-else>fine</h1>'
       );
       expect(code).toBe(
-        'ok ? h("div") : orNot ? h("p") : h("h1", null, "fine")'
+        '[ok ? h("div") : orNot ? h("p") : h("h1", null, "fine")]'
       );
     });
 
@@ -118,7 +118,7 @@ describe('compiler: integration tests', () => {
       const code = compile(
         '<div v-if="ok"/> <p v-else-if="no"/> <span v-else/>'
       );
-      expect(code).toBe('ok ? h("div") : no ? h("p") : h("span")');
+      expect(code).toBe('[ok ? h("div") : no ? h("p") : h("span")]');
     });
 
     test('nested', () => {
@@ -160,7 +160,7 @@ describe('compiler: integration tests', () => {
                         : h("span")
              */
       expect(code).toBe(
-        'ok ? h("div", null, "ok") : foo ? h("div", null, [a ? h("h1") : b ? h("h2") : h(Text, null, ""), c ? h("h3") : d ? h("h4") : e ? h("h5") : h("h6", null, [h("div", null, "hello world")])]) : h("span")'
+        '[ok ? h("div", null, "ok") : foo ? h("div", null, [a ? h("h1") : b ? h("h2") : h(Text, null, ""), c ? h("h3") : d ? h("h4") : e ? h("h5") : h("h6", null, [h("div", null, "hello world")])]) : h("span")]'
       );
     });
   });

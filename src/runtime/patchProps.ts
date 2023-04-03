@@ -9,7 +9,10 @@ export const patchProps = (oldProps, newProps, el) => {
         continue
       }
       const next = newProps[key];
-      const prev = oldProps[key];
+      let prev
+      if(oldProps&&oldProps[key]){
+         prev = oldProps[key] || "";
+      }
       if (next !== prev) {
         patchDomProp(prev, next, key, el);
       } 
@@ -18,7 +21,7 @@ export const patchProps = (oldProps, newProps, el) => {
     newProps = newProps || {}
     for(const key in oldProps){
       const next = newProps[key];
-      const prev = oldProps[key];
+      const prev = oldProps[key] || null;
       if (key !== 'key'&&next  == null) {
         patchDomProp(prev, null, key, el);
       } 

@@ -1,6 +1,5 @@
 import { capitalize } from "../utils";
 import { NodeTypes } from "./ast";
-import { isString } from "../utils/index";
 
 export const generate = (ast) => {
   const returns = traverseNode(ast);
@@ -16,7 +15,8 @@ export const traverseNode = (node, parent?) => {
       if (node.children.length === 1) {
         return traverseNode(node.children[0], node);
       }
-      const result = traverseChildren(node);
+      let result:any = traverseChildren(node);
+      // result = result.slice(1,-1)
       return result;
     case NodeTypes.ELEMENT:
       return resolveElementASTNode(node, parent);
@@ -73,16 +73,16 @@ export const resolveElementASTNode = (node, parent) => {
       break;
     }
     const { exp } = ifNode;
-    return `${exp.content}?${consequent}:${alternate || createTextVNode()}`;
+    return `${exp.content} ? ${consequent} : ${alternate || createTextVNode()}`;
   }
   const forNode = pluck(node.directives, "for");
   if (forNode) {
     const { exp } = forNode;
     const [args, source] = exp.content.split(/\sin\s|\sof\s/);
-    return `h(Fragment,null,renderList(${source.trim()}),${args.trim()}=>${resolveElementASTNode(
+    return `h(Fragment, null, renderList(${source.trim()}, ${args.trim()} => ${resolveElementASTNode(
       node,
       parent
-    )})`;
+    )}))`;
   }
   return createElementVNode(node);
 };
@@ -90,10 +90,10 @@ export const createElementVNode = (node) => {
   const { children, tagType } = node;
   const tag =
     tagType === NodeTypes.ELEMENT
-      ? `"${node.tag}`
-      : `resolveCOmponent("${node.tag}")`;
+      ? `"${node.tag}"`
+      : `resolveComponent("${node.tag}")`;
   const propArr: any = createPropArr(node);
-  let propStr = propArr.length ? `{${propArr.join(", ")}}` : "null";
+  let propStr = propArr.length ? `{ ${propArr.join(", ")} }` : "null";
   const vmodel = pluck(node.directives, "model");
   if (vmodel) {
     const getter = `()=>${createText(vmodel.exp)}`;
@@ -112,20 +112,20 @@ export const createElementVNode = (node) => {
 export const createPropArr = (node) => {
   const { props, directives } = node;
   return [
-    ...props.map((prop) => `${props.name}:${createText(prop.value)}`),
+    ...props.map((prop) => `${prop.name}: ${createText(prop.value)}`),
     ...directives.map((dir) => {
       switch (dir.name) {
         case "bind":
-          return `${dir.arg.content}:${createText(dir.exp)}`;
+          return `${dir.arg.content}: ${createText(dir.exp)}`;
         case "on":
           const eventName = `on${capitalize(dir.arg.content)}`;
           let exp = dir.exp.content;
           if (/\([^)]*?\)$/.test(exp) && !exp.includes("=>")) {
-            exp = `$event =>(${exp})`;
+            exp = `$event => (${exp})`;
           }
-          return `${eventName}:${exp}`;
+          return `${eventName}: ${exp}`;
         case "html":
-          return `innerHTML:${createText(dir.exp)} `;
+          return `innerHTML: ${createText(dir.exp)} `;
         default:
           return `${dir.name}: ${createText(dir.exp)}`;
       }
