@@ -234,7 +234,7 @@ export const pathchkeyedArrayChildren = (c1, c2, container, anchor) => {
 export const lengthOfLTS = (nums) => {
   const deps = new Array(nums.length).fill(1);
   let max = 1;
-  for (let i = 0; i < nums.length; i++) {
+  for (let i = 1; i < nums.length; i++) {
     for (let j = 0; j < i; j++) {
       if (nums[i] > nums[j]) {
         deps[i] = Math.max(deps[i], deps[j] + 1);
